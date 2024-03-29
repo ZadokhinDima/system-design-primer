@@ -60,7 +60,7 @@ Timeline
 
 > Outline a high level design with all important components.
 
-![Imgur](http://i.imgur.com/48tEA2j.png)
+![Initial design](https://github.com/ZadokhinDima/system-design-primer/blob/master/solutions/system_design/Instagram/instagram_high_level.png?raw=true)
 
 ## Step 3: Design core components
 

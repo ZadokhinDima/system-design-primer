@@ -2,12 +2,6 @@
 
 ## Step 1: Outline use cases and constraints
 
-> Gather requirements and scope the problem.
-> Ask questions to clarify use cases and constraints.
-> Discuss assumptions.
-
-Without an interviewer to address clarifying questions, we'll define some use cases and constraints.
-
 ### Use cases
 
 #### We'll scope the problem to handle only the following use cases
@@ -58,13 +52,9 @@ Timeline
           
 ## Step 2: Create a high level design
 
-> Outline a high level design with all important components.
-
 ![Initial design](https://github.com/ZadokhinDima/system-design-primer/blob/master/solutions/system_design/Instagram/instagram_high_level.png?raw=true)
 
 ## Step 3: Design core components
-
-> Dive into details for each core component.
 
 ### Use case: User posts a photo
 
@@ -105,111 +95,24 @@ For internal communications, we could use [Remote Procedure Calls](https://githu
 
 ## Step 4: Scale the design
 
-> Identify and address bottlenecks, given the constraints.
+![Scalled design](https://github.com/ZadokhinDima/system-design-primer/blob/master/solutions/system_design/Instagram/instagram_high_level_scalled.png?raw=true)
 
-![Imgur](http://i.imgur.com/jrUBAF7.png)
-
-**Important: Do not simply jump right into the final design from the initial design!**
-
-State you would 1) **Benchmark/Load Test**, 2) **Profile** for bottlenecks 3) address bottlenecks while evaluating alternatives and trade-offs, and 4) repeat.  See [Design a system that scales to millions of users on AWS](../scaling_aws/README.md) as a sample on how to iteratively scale the initial design.
-
-It's important to discuss what bottlenecks you might encounter with the initial design and how you might address each of them.  For example, what issues are addressed by adding a **Load Balancer** with multiple **Web Servers**?  **CDN**?  **Master-Slave Replicas**?  What are the alternatives and **Trade-Offs** for each?
 
 We'll introduce some components to complete the design and to address scalability issues.  Internal load balancers are not shown to reduce clutter.
 
-*To avoid repeating discussions*, refer to the following [system design topics](https://github.com/donnemartin/system-design-primer#index-of-system-design-topics) for main talking points, tradeoffs, and alternatives:
+Changes:
+* Web-Service and Application Layers are scalled horyzontally. This will allow system to adapt to any load.
+* **Main Storage** is scalled using master-slave replication. This also unlocks the full potential of CQRS usage (read/write separation).
+* **User service** is removed as it's only responcibility was to get list of subscribers for user.  
+    * Potentially user service is required for the system but not for the given use cases.
+* **Feed Cache** is also replicated for higher throughput.
+* **CDN** added for faster conntent delivery.
 
-* [DNS](https://github.com/donnemartin/system-design-primer#domain-name-system)
-* [CDN](https://github.com/donnemartin/system-design-primer#content-delivery-network)
-* [Load balancer](https://github.com/donnemartin/system-design-primer#load-balancer)
-* [Horizontal scaling](https://github.com/donnemartin/system-design-primer#horizontal-scaling)
-* [Web server (reverse proxy)](https://github.com/donnemartin/system-design-primer#reverse-proxy-web-server)
-* [API server (application layer)](https://github.com/donnemartin/system-design-primer#application-layer)
-* [Cache](https://github.com/donnemartin/system-design-primer#cache)
-* [Relational database management system (RDBMS)](https://github.com/donnemartin/system-design-primer#relational-database-management-system-rdbms)
-* [SQL write master-slave failover](https://github.com/donnemartin/system-design-primer#fail-over)
-* [Master-slave replication](https://github.com/donnemartin/system-design-primer#master-slave-replication)
-* [Consistency patterns](https://github.com/donnemartin/system-design-primer#consistency-patterns)
-* [Availability patterns](https://github.com/donnemartin/system-design-primer#availability-patterns)
-
-The **Fanout Service** is a potential bott
-
-Additional optimizations include:
-
-* Keep only several hundred tweets for each home timeline in the **Memory Cache**
-* Keep only active users' home timeline info in the **Memory Cache**
-    * If a user was not previously active in the past 30 days, we could rebuild the timeline from the **SQL Database**
-        * Query the **User Graph Service** to determine who the user is following
-        * Get the tweets from the **SQL Database** and add them to the **Memory Cache**
-* Store only a month of tweets in the **Tweet Info Service**
-* Store only active users in the **User Info Service**
-* The **Search Cluster** would likely need to keep the tweets in memory to keep latency low
-
-We'll also want to address the bottleneck with the **SQL Database**.
-
-Although the **Memory Cache** should reduce the load on the database, it is unlikely the **SQL Read Replicas** alone would be enough to handle the cache misses.  We'll probably need to employ additional SQL scaling patterns.
-
-The high volume of writes would overwhelm a single **SQL Write Master-Slave**, also pointing to a need for additional scaling techniques.
-
-* [Federation](https://github.com/donnemartin/system-design-primer#federation)
-* [Sharding](https://github.com/donnemartin/system-design-primer#sharding)
-* [Denormalization](https://github.com/donnemartin/system-design-primer#denormalization)
-* [SQL Tuning](https://github.com/donnemartin/system-design-primer#sql-tuning)
+Additional considerations:
+* Keep only several hundred posts for each user in the **Feed Cache**
+* Keep data in **Feed Cache** only for active users.
+* At any moment **Feed Service** can update user's feed.
+    * Will happen when additional posts requested or user becomes active.
+    * **Feed Service** uses data from SQL read replicas.
 
 We should also consider moving some data to a **NoSQL Database**.
-
-## Additional talking points
-
-> Additional topics to dive into, depending on the problem scope and time remaining.
-
-#### NoSQL
-
-* [Key-value store](https://github.com/donnemartin/system-design-primer#key-value-store)
-* [Document store](https://github.com/donnemartin/system-design-primer#document-store)
-* [Wide column store](https://github.com/donnemartin/system-design-primer#wide-column-store)
-* [Graph database](https://github.com/donnemartin/system-design-primer#graph-database)
-* [SQL vs NoSQL](https://github.com/donnemartin/system-design-primer#sql-or-nosql)
-
-### Caching
-
-* Where to cache
-    * [Client caching](https://github.com/donnemartin/system-design-primer#client-caching)
-    * [CDN caching](https://github.com/donnemartin/system-design-primer#cdn-caching)
-    * [Web server caching](https://github.com/donnemartin/system-design-primer#web-server-caching)
-    * [Database caching](https://github.com/donnemartin/system-design-primer#database-caching)
-    * [Application caching](https://github.com/donnemartin/system-design-primer#application-caching)
-* What to cache
-    * [Caching at the database query level](https://github.com/donnemartin/system-design-primer#caching-at-the-database-query-level)
-    * [Caching at the object level](https://github.com/donnemartin/system-design-primer#caching-at-the-object-level)
-* When to update the cache
-    * [Cache-aside](https://github.com/donnemartin/system-design-primer#cache-aside)
-    * [Write-through](https://github.com/donnemartin/system-design-primer#write-through)
-    * [Write-behind (write-back)](https://github.com/donnemartin/system-design-primer#write-behind-write-back)
-    * [Refresh ahead](https://github.com/donnemartin/system-design-primer#refresh-ahead)
-
-### Asynchronism and microservices
-
-* [Message queues](https://github.com/donnemartin/system-design-primer#message-queues)
-* [Task queues](https://github.com/donnemartin/system-design-primer#task-queues)
-* [Back pressure](https://github.com/donnemartin/system-design-primer#back-pressure)
-* [Microservices](https://github.com/donnemartin/system-design-primer#microservices)
-
-### Communications
-
-* Discuss tradeoffs:
-    * External communication with clients - [HTTP APIs following REST](https://github.com/donnemartin/system-design-primer#representational-state-transfer-rest)
-    * Internal communications - [RPC](https://github.com/donnemartin/system-design-primer#remote-procedure-call-rpc)
-* [Service discovery](https://github.com/donnemartin/system-design-primer#service-discovery)
-
-### Security
-
-Refer to the [security section](https://github.com/donnemartin/system-design-primer#security).
-
-### Latency numbers
-
-See [Latency numbers every programmer should know](https://github.com/donnemartin/system-design-primer#latency-numbers-every-programmer-should-know).
-
-### Ongoing
-
-* Continue benchmarking and monitoring your system to address bottlenecks as they come up
-* Scaling is an iterative process
